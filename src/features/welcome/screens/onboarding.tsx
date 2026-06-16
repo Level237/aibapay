@@ -1,38 +1,33 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronRight } from 'lucide-react-native';
-import { useRef, useState } from 'react';
+import React from 'react';
 import {
     Dimensions,
     StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
 } from 'react-native';
 import Animated, {
     Extrapolation,
     interpolate,
-    interpolateColor,
     useAnimatedScrollHandler,
     useAnimatedStyle,
     useSharedValue,
     type SharedValue,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { onboardingData } from '../data/onboarding';
 
 const { width, height } = Dimensions.get('window');
 
 const COLORS = {
-    primary: '#8B5CF6',
-    background: '#121212',
-    accent: '#0232f8',
+    primary: '#0031F6',
     text: '#ffffff',
-    textSecondary: '#B0B4BA',
+    textSecondary: '#a0a0a0',
 };
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+
 
 type OnboardingItemProps = {
     item: (typeof onboardingData)[0];
@@ -40,16 +35,7 @@ type OnboardingItemProps = {
     x: SharedValue<number>;
 };
 
-type DotProps = {
-    index: number;
-    x: SharedValue<number>;
-};
-
-// ─── Slide Item ───────────────────────────────────────────────────────────────
-
 const OnboardingItem = ({ item, index, x }: OnboardingItemProps) => {
-    const isFirst = index === 0;
-
     const animatedStyle = useAnimatedStyle(() => {
         const opacity = interpolate(
             x.value,
@@ -57,24 +43,29 @@ const OnboardingItem = ({ item, index, x }: OnboardingItemProps) => {
             [0, 1, 0],
             Extrapolation.CLAMP
         );
-        return { opacity };
+        return {
+            opacity,
+        };
     });
 
     return (
         <View style={styles.itemContainer}>
+            {/* Full Screen Image */}
             <Animated.View style={[StyleSheet.absoluteFill, animatedStyle]}>
                 <Image
                     source={item.image}
                     style={styles.image}
-                    contentFit={isFirst ? 'contain' : 'cover'}
+                    contentFit="cover"
                     transition={500}
                 />
+                {/* Dark Gradient Overlay at Bottom */}
                 <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.92)']}
+                    colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.95)']}
                     style={styles.gradientOverlay}
                 />
             </Animated.View>
 
+            {/* Text Content */}
             <View style={styles.textContainer}>
                 <Text style={styles.title}>{item.title}</Text>
                 <Text style={styles.description}>{item.description}</Text>
@@ -83,51 +74,43 @@ const OnboardingItem = ({ item, index, x }: OnboardingItemProps) => {
     );
 };
 
-// ─── Dot ──────────────────────────────────────────────────────────────────────
-// BUG FIX #1 : useAnimatedStyle() appelé dans .map() → violation Rules of Hooks.
-// Solution : chaque dot est un composant React indépendant avec son propre hook.
-
-const Dot = ({ index, x }: DotProps) => {
-    const animatedDotStyle = useAnimatedStyle(() => {
-        const dotWidth = interpolate(
-            x.value,
-            [(index - 1) * width, index * width, (index + 1) * width],
-            [8, 24, 8],
-            Extrapolation.CLAMP
-        );
-        const opacity = interpolate(
-            x.value,
-            [(index - 1) * width, index * width, (index + 1) * width],
-            [0.4, 1, 0.4],
-            Extrapolation.CLAMP
-        );
-        return { width: dotWidth, opacity };
-    });
-
-    return <Animated.View style={[styles.dot, animatedDotStyle]} />;
+const Pagination = ({ x }: { x: SharedValue<number> }) => {
+    return (
+        <View style={styles.paginationContainer}>
+            {onboardingData.map((_, index) => {
+                const animatedDotStyle = useAnimatedStyle(() => {
+                    const widthAnim = interpolate(
+                        x.value,
+                        [(index - 1) * width, index * width, (index + 1) * width],
+                        [10, 20, 10],
+                        Extrapolation.CLAMP
+                    );
+                    const opacity = interpolate(
+                        x.value,
+                        [(index - 1) * width, index * width, (index + 1) * width],
+                        [0.5, 1, 0.5],
+                        Extrapolation.CLAMP
+                    );
+                    return {
+                        width: widthAnim,
+                        opacity,
+                    };
+                });
+                return (
+                    <Animated.View
+                        key={index}
+                        style={[styles.dot, animatedDotStyle]}
+                    />
+                );
+            })}
+        </View>
+    );
 };
 
-// ─── Pagination ───────────────────────────────────────────────────────────────
-
-const Pagination = ({ x }: { x: SharedValue<number> }) => (
-    <View style={styles.paginationContainer}>
-        {onboardingData.map((_, i) => (
-            <Dot key={i} index={i} x={x} />
-        ))}
-    </View>
-);
-
-// ─── Main Screen ──────────────────────────────────────────────────────────────
-
-interface OnboardingProps {
-    onComplete: () => void;
-}
-
-export function OnboardingScreen({ onComplete }: OnboardingProps) {
+const OnboardingScreen = () => {
     const x = useSharedValue(0);
-    const flatListRef = useRef<Animated.FlatList<any>>(null);
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const insets = useSafeAreaInsets();
+    const flatListRef = React.useRef<Animated.FlatList<any>>(null);
+    const [currentIndex, setCurrentIndex] = React.useState(0);
 
     const onScroll = useAnimatedScrollHandler({
         onScroll: (event) => {
@@ -135,103 +118,37 @@ export function OnboardingScreen({ onComplete }: OnboardingProps) {
         },
     });
 
-    const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    const onViewableItemsChanged = React.useRef(({ viewableItems }: any) => {
         if (viewableItems[0]) {
             setCurrentIndex(viewableItems[0].index);
         }
     }).current;
 
-    // BUG FIX #2 : condition était `< length` → scrollToIndex hors limites → crash.
     const handleNext = () => {
-        console.log(currentIndex);
-        console.log(onboardingData.length - 1);
-
-        if (currentIndex <= onboardingData.length - 1) {
+        if (currentIndex < onboardingData.length - 1) {
             flatListRef.current?.scrollToIndex({
                 index: currentIndex + 1,
                 animated: true,
             });
         } else {
-            onComplete();
+            //router.replace('/welcome');
         }
     };
 
-    const handleSkip = () => onComplete();
-
-    // Fond qui transite de #0232f8 (bleu) → #121212 (sombre) en swipant
-    const animatedContainerStyle = useAnimatedStyle(() => {
-        const backgroundColor = interpolateColor(
-            x.value,
-            [0, width, 2 * width],
-            [COLORS.accent, COLORS.background, COLORS.background]
-        );
-        return { backgroundColor };
-    });
-
-    // Bouton "Passer" s'efface progressivement sur le dernier slide
-    const animatedSkipStyle = useAnimatedStyle(() => {
-        const opacity = interpolate(
-            x.value,
-            [width * (onboardingData.length - 2), width * (onboardingData.length - 1)],
-            [1, 0],
-            Extrapolation.CLAMP
-        );
-        return { opacity };
-    });
-
-    // Bouton suivant s'élargit en capsule sur le dernier slide
-    const animatedNextButtonStyle = useAnimatedStyle(() => {
-        const buttonWidth = interpolate(
-            x.value,
-            [width * (onboardingData.length - 2), width * (onboardingData.length - 1)],
-            [56, 150],
-            Extrapolation.CLAMP
-        );
-        return { width: buttonWidth };
-    });
-
-    // Texte "Commencer" apparaît en fade-in sur le dernier slide
-    const animatedNextTextStyle = useAnimatedStyle(() => {
-        const opacity = interpolate(
-            x.value,
-            [width * (onboardingData.length - 1.5), width * (onboardingData.length - 1)],
-            [0, 1],
-            Extrapolation.CLAMP
-        );
-        return { opacity };
-    });
-
-    const isLastSlide = currentIndex === onboardingData.length - 1;
+    const handleSkip = () => {
+        //router.replace('/welcome');
+    };
 
     return (
-        <Animated.View style={[styles.container, animatedContainerStyle]}>
-            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-
-            {/* Bouton "Passer" — statique, haut à droite */}
-            <View style={[styles.headerContainer, { top: insets.top + 12 }]}>
-                <Animated.View style={animatedSkipStyle}>
-                    {/* BUG FIX #3 : pointerEvents n'existe pas sur TouchableOpacity.
-                        On l'applique sur le View parent à la place. */}
-                    <View pointerEvents={isLastSlide ? 'none' : 'auto'}>
-                        <TouchableOpacity
-                            style={styles.skipButton}
-                            onPress={handleSkip}
-                            activeOpacity={0.7}
-                        >
-                            <Text style={styles.skipText}>Passer</Text>
-                        </TouchableOpacity>
-                    </View>
-                </Animated.View>
-            </View>
-
-            {/* Slides défilants */}
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" />
             <Animated.FlatList
                 ref={flatListRef}
                 data={onboardingData}
                 renderItem={({ item, index }) => (
                     <OnboardingItem item={item} index={index} x={x} />
                 )}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 pagingEnabled
@@ -242,65 +159,46 @@ export function OnboardingScreen({ onComplete }: OnboardingProps) {
                 viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
             />
 
-            {/* Footer fixe — pagination + bouton */}
-            <View style={[styles.bottomWrapper, { paddingBottom: insets.bottom + 16 }]}>
-                <View style={styles.controlsRow}>
-                    <Pagination x={x} />
+            <View style={styles.bottomWrapper}>
+                <Pagination x={x} />
 
-                    <Animated.View style={[styles.nextButtonWrapper, animatedNextButtonStyle]}>
-                        <TouchableOpacity
-                            style={styles.nextButton}
-                            onPress={handleNext}
-                            activeOpacity={0.8}
-                        >
-                            <View style={styles.nextButtonContent}>
-                                <Animated.View style={[styles.getStartedTextWrapper, animatedNextTextStyle]}>
-                                    <Text style={styles.getStartedText} numberOfLines={1}>
-                                        Commencer
-                                    </Text>
-                                </Animated.View>
-                                <View style={styles.chevronWrapper}>
-                                    <ChevronRight size={20} color="#FFFFFF" strokeWidth={3} />
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    </Animated.View>
+                <View style={styles.buttonContainer}>
+                    {/* Left Button: Passer / Skip */}
+                    <TouchableOpacity
+                        style={styles.skipButton}
+                        onPress={handleSkip}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.skipButtonText}>Passer</Text>
+                    </TouchableOpacity>
+
+                    {/* Right Button: Next */}
+                    <TouchableOpacity
+                        style={styles.nextButton}
+                        onPress={handleNext}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={styles.nextButtonText}>
+                            {currentIndex === onboardingData.length - 1 ? 'Commencer' : 'Suivant'}
+                        </Text>
+                    </TouchableOpacity>
                 </View>
             </View>
-        </Animated.View>
+        </View>
     );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    headerContainer: {
-        position: 'absolute',
-        right: 24,
-        zIndex: 10,
-    },
-    skipButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.25)',
-    },
-    skipText: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: '600',
-        letterSpacing: 0.5,
+        backgroundColor: '#000',
     },
     itemContainer: {
-        width,
-        height,
-        justifyContent: 'flex-end',
-        paddingBottom: 160,
+        width: width,
+        height: height,
+        alignItems: 'center',
+        justifyContent: 'flex-end', // Push content to bottom
+        paddingBottom: 150, // Space for buttons/pagination
     },
     image: {
         width: '100%',
@@ -311,10 +209,11 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        height: height * 0.55,
+        height: height * 0.6, // Gradient covers bottom 60%
     },
     textContainer: {
-        paddingHorizontal: 24,
+        alignItems: 'flex-start',
+        paddingHorizontal: 16,
         zIndex: 1,
     },
     title: {
@@ -324,78 +223,67 @@ const styles = StyleSheet.create({
         textAlign: 'left',
         marginBottom: 12,
         letterSpacing: 0.5,
-        lineHeight: 38,
     },
     description: {
         fontSize: 16,
-        color: COLORS.textSecondary,
+        color: 'rgba(255, 255, 255, 0.9)',
         textAlign: 'left',
-        lineHeight: 22,
+        lineHeight: 21,
     },
     bottomWrapper: {
         position: 'absolute',
-        bottom: 0,
+        bottom: 50,
         left: 0,
         right: 0,
-        paddingHorizontal: 24,
+        paddingHorizontal: 30,
         zIndex: 2,
-    },
-    controlsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        width: '100%',
-        height: 56,
     },
     paginationContainer: {
         flexDirection: 'row',
+        justifyContent: 'center',
         alignItems: 'center',
+        marginBottom: 30,
     },
     dot: {
         height: 8,
         borderRadius: 4,
         backgroundColor: COLORS.primary,
-        marginRight: 8,
+        marginHorizontal: 4,
     },
-    nextButtonWrapper: {
-        height: 56,
-        borderRadius: 28,
-        overflow: 'hidden',
+    buttonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        width: '100%',
+    },
+    skipButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+    },
+    skipButtonText: {
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    nextButton: {
         backgroundColor: COLORS.primary,
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 12,
         shadowColor: COLORS.primary,
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 5,
     },
-    nextButton: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    nextButtonContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        height: '100%',
-        paddingHorizontal: 6,
-    },
-    chevronWrapper: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        position: 'absolute',
-        right: 6,
-    },
-    getStartedTextWrapper: {
-        position: 'absolute',
-        left: 18,
-        justifyContent: 'center',
-    },
-    getStartedText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '700',
+    nextButtonText: {
+        color: COLORS.text,
+        fontSize: 13,
+        fontWeight: 'bold',
     },
 });
+
+export default OnboardingScreen;

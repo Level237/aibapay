@@ -1,14 +1,6 @@
-export const imagesOnboarding = [
-    {
-        id: 1,
-        image: require("@/assets/images/onboarding/onboarding1.png"),
-    },
-    {
-        id: 2,
-        image: require("@/assets/images/onboarding/onboarding2.png"),
-    },
-    {
-        id: 3,
-        image: require("@/assets/images/onboarding/onboarding3.jpg"),
-    },
-];  
+export const imagesOnboarding = {
+    onboarding1: require('@/assets/images/onboarding/onboarding1.png'),
+    onboarding2: require('@/assets/images/onboarding/onboarding2.png'),
+    onboarding3: require('@/assets/images/onboarding/onboarding3.jpg'),
+
+}
