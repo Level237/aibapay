@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
 import {
@@ -167,7 +168,7 @@ export function OnboardingScreen({ onComplete }: OnboardingProps) {
                 animated: true,
             });
         } else {
-            onComplete();
+            router.replace('/welcome');
         }
     };
 
