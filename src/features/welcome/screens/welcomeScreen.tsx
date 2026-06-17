@@ -85,7 +85,7 @@ const ActionSection = ({ onLogin, onRegister }: { onLogin: () => void, onRegiste
             onPress={onRegister}
             activeOpacity={0.6}
         >
-            <Text style={styles.secondaryLinkText}>
+            <Text onPress={onRegister} style={styles.secondaryLinkText}>
                 Nouveau ici ? <Text style={styles.linkHighlight}>Créer un compte</Text>
             </Text>
         </TouchableOpacity>
@@ -100,7 +100,10 @@ export function WelcomeScreen() {
     const handleLogin = () => {
         router.push("/(auth)/login")
     };
-    const handleRegister = () => console.log('Register pressed');
+    const handleRegister = () => {
+        router.push("/(auth)/register")
+        console.log('kke')
+    };
 
     return (
         <View style={[styles.container, { backgroundColor: COLORS.background }]}>
